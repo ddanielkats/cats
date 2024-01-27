@@ -4,9 +4,12 @@ from Utils import *
 from node import Node
 from employee import Employee
 import time
-
+from typing import List
 
 def getTravelData(origins, destinations):
+    origins = [origins] if isinstance(origins, str) else origins
+    destinations = [destinations] if isinstance(destinations, str) else destinations
+
     # Doesn't calculate traffic, only pure driving time
     origins = [o.replace("nan", "") for o in set(origins)]
     destinations = [d.replace("nan", "") for d in set(destinations)]
@@ -55,7 +58,7 @@ def getTravelData(origins, destinations):
 
 
 
-def calculate_weight(times, node, employee):
+def calculate_weight(times : dict, node : Node, employee : Employee) -> float:
     """calculates the weight for a given path between soruce and node
     
     times : Dictionary with origin-location mapping
@@ -64,7 +67,7 @@ def calculate_weight(times, node, employee):
     
     """
     #travel time in minutes
-    travel_time = convert_to_minutes(times[employee.start_location][node.location])
+    travel_time = convert_to_minutes(times[employee.location][node.location])
     #days since cat request in days
     days_since = (datetime.now() - node.created_on).days
     #how close will the employee be to the feeding time in minutes
@@ -88,24 +91,27 @@ def calculate_weight(times, node, employee):
     #lower sum = lower priorty
     return weighted_sum
 
-def map_employee(emp, nodes, max_stops):
+def map_employee(emp : Employee, nodes : List[Node], max_stops : int): 
     """maps all the stops for a given empoloyee by the closest(lowest weight) stop first"""
     if max_stops == 0:
         return
     
     curr_node = None
     min_weight = float('inf')
+    times = getTravelData(emp.location, [node.location for node in nodes])
+
     for node in nodes:
         weight = calculate_weight(times, node, employee)
         if weight <= min_weight:
+            min_weight = weight
             curr_node = node
     
-    emp.add_stop(node.location)
-
+    emp.add_stop(curr_node.location)
+    emp.location = curr_node.location
     # Exclude the current node from the list before making the recursive call
-    remaining_nodes = [node for node in nodes if node != curr_node]
+    nodes.remove(curr_node)
 
-    map_employee(times, emp, remaining_nodes, max_stops - 1)
+    map_employee(emp, nodes, max_stops - 1)
 
 if __name__ == "__main__":
     employees = []
@@ -117,7 +123,7 @@ if __name__ == "__main__":
     for index, employee_row in emp_data.iterrows():
         emp = Employee(employee_row)
         employees.append(emp)
-        origins.append(emp.start_location)
+        origins.append(emp.location)
 
     #create the node on the map without employee priority
     for index, pick_request in cat_data.iterrows():
@@ -128,15 +134,6 @@ if __name__ == "__main__":
 
 
 
-    #get times dictionary for all routes possible
-    times = getTravelData(origins, destinations)
-
-
-    """#classify prefered order of employees for each node
-    for node in nodes:
-        for employee in employees:
-            node.add_emp(employee, calculate_weight(times, node, employee))
-    """
     #calculate the route for each employee into his stops variable
     for employee in employees:
         map_employee(employee, nodes, 5)

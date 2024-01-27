@@ -44,8 +44,16 @@ dict2 = {'a': {'c' : 2},
 
 dict1 = merge_dicts(dict1, dict2)
 print(dict1)
-"""
+
 
 
 times = getTravelData(['נוף הגליל', 'תל אביב'], ['אילת', 'באר שבע'])
 write_to_file(times, 'RESPONSE.json')
+"""
+
+origins = 'קרית אונו'
+origins = [origins]
+# Doesn't calculate traffic, only pure driving time
+origins = [o.replace("nan", "") for o in set(origins)]
+
+print('|'.join(origins))
