@@ -1,7 +1,7 @@
+import requests
 import json
 import pandas as pd
 from datetime import datetime, timedelta
-
 
 #-------------------------constants to be used in main----------------------------------
 #read excel
@@ -48,8 +48,6 @@ def parse_response(response):
         for destination in response["destination_addresses"]:
             dest_indx = response["destination_addresses"].index(destination)
             duration = elements[dest_indx]["duration"]["text"]
-            #deleting what comes after the comma for example : nof hagalil, israel turns to nof hagalil
-            origin, destination = delete_after_comma(origin), delete_after_comma(destination)
             # Use the origin-destination pair as the keys in the parsed dictionary
             if not origin in parsed:
                 parsed[origin] = {}
@@ -86,11 +84,10 @@ def reverse_data(input_data):
 
 
 def convert_to_minutes(time_string):
-    """convert a time string that looks like '3 hours 12 mins' to pure minutes"""
+    """convert a time string that looks like '3 hours 12 mins' or '18 mins' to pure minutes"""
     # Split the string into parts using space as the delimiter
     parts = time_string.split()
 
-    # Check if the split resulted in the expected format
     if len(parts) == 4 and parts[1] == 'hours' and parts[3] == 'min':
         try:
             # Extract hours and minutes from the parts and convert to integers
@@ -103,23 +100,31 @@ def convert_to_minutes(time_string):
         except ValueError:
             print("Invalid time format: Non-integer values detected.")
             return None
+    elif len(parts) == 2 and parts[1] == 'mins':
+        try:
+            # Extract minutes from the parts and convert to integers
+            minutes = int(parts[0])
+
+            # Return the total minutes
+            return minutes
+        except ValueError:
+            print("Invalid time format: Non-integer values detected.")
+            return None
     else:
         print("Invalid time format")
         return None
 
 
-
 def calculate_future_delta(start_time, travel_time, target_hour):
-    """returns the time difference in minutes from the time of arrival to the target hour in that day"""
+    """returns the time difference in minutes from the time of arrival to the target hour in that day
+    start_time : datetime
+    travel_time : time in minutes
+    target_hour : like 7:00
+    """
     
-    # Split the duration string into hours and minutes
-    duration_list = travel_time.split()
-    # Extract hours and minutes from travel_time
-    hours = int(duration_list[0]) if 'hours' in duration_list else 0
-    minutes = int(duration_list[2]) if 'mins' in duration_list else 0
-    duration = timedelta(hours=hours, minutes=minutes)
+    
     # Calculate arrival time
-    arrival_time = start_time + duration
+    arrival_time = start_time + timedelta(minutes=travel_time)
 
     # Get the current date
     current_date = datetime.now().date()
@@ -140,3 +145,26 @@ def merge_dicts(dict1, dict2):
             # Overwrite or add key-value pair
             dict1[key] = value
     return dict1
+
+
+def geocode(location : str):
+    base_url = "https://maps.googleapis.com/maps/api/geocode/json"
+    api_key = 'AIzaSyBtWeoy_5l6X0HBsiDfmJkr6nsLdUZ6gxw'
+    payload = {
+        'address' : location,
+        'key' : api_key
+    }
+    r = requests.get(base_url, params=payload).json()
+    
+    return r['results'][0]['formatted_address']
+
+
+def add_address(adress_dict : dict, hebrew_location : str, coded_location : str):
+    """adds an adress to a hebrew - english dictionary in both ways
+    hebrew_location : location in hebrew from the excel
+    coded_location : google maps location
+    
+    """
+
+    adress_dict['english'][hebrew_location] = coded_location
+    adress_dict['hebrew'][coded_location] = hebrew_location
