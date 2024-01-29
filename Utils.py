@@ -2,7 +2,7 @@ import requests
 import json
 import pandas as pd
 from datetime import datetime, timedelta
-
+import math
 #-------------------------constants to be used in main----------------------------------
 #read excel
 dfs = pd.read_excel("./CAT_DATA.xlsx", sheet_name=None)
@@ -88,7 +88,7 @@ def convert_to_minutes(time_string):
     # Split the string into parts using space as the delimiter
     parts = time_string.split()
 
-    if len(parts) == 4 and parts[1] == 'hours' and parts[3] == 'min':
+    if len(parts) == 4 and parts[1] == 'hours' and parts[3] in('min', 'mins'):
         try:
             # Extract hours and minutes from the parts and convert to integers
             hours = int(parts[0])
@@ -100,7 +100,7 @@ def convert_to_minutes(time_string):
         except ValueError:
             print("Invalid time format: Non-integer values detected.")
             return None
-    elif len(parts) == 2 and parts[1] == 'mins':
+    elif len(parts) == 2 and parts[1] in('min', 'mins'):
         try:
             # Extract minutes from the parts and convert to integers
             minutes = int(parts[0])
@@ -121,7 +121,12 @@ def calculate_future_delta(start_time, travel_time, target_hour):
     travel_time : time in minutes
     target_hour : like 7:00
     """
-    
+    #if the target hour is empty in excel, return 0
+    try:
+        if math.isnan(target_hour):
+            return 0
+    except:
+        pass
     
     # Calculate arrival time
     arrival_time = start_time + timedelta(minutes=travel_time)
