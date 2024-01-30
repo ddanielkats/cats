@@ -85,6 +85,9 @@ def map_employee(emp : Employee, nodes : List[Node], max_stops : int):
     """maps all the stops for a given empoloyee by the closest(lowest weight) stop first"""
     if max_stops == 0:
         return
+    if len(nodes) == 0:
+        print("no more nodes")
+        return
     
     curr_node = None
     min_weight = float('inf')
@@ -126,16 +129,21 @@ if __name__ == "__main__":
         nodes.append(node)
         destinations.append(node.location)
 
-    print(f'time for object creation :  {round(time.time() - t1, 2)} sec')
-    t2 = time.time()
-    employee = Employee(emp_data.iloc[6], address_dict, geocode)
-    map_employee(employee, nodes, 5)
-    print(employee.stops)
-    print(f'time for mapping :  {round(time.time() - t2, 2)} sec')
+    print(f'time for object creation :  {round(time.time() - t1, 2)} sec\n')
+    
+    
 
-"""
     #calculate the route for each employee into his stops variable
     for employee in employees:
+        t2 = time.time()
         map_employee(employee, nodes, 5)
-        #print(employee.stops)
-"""
+        print(f'''
+        time for {reverse_data(employee.name)}:  {round(time.time() - t2, 2)}
+        origin:  
+        stops:   {employee.stops}
+        
+
+        ''')
+    
+    t3 = time.time()
+    print(f'time for mapping :  {round(time.time() - t3, 2)} sec')

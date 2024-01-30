@@ -2,3 +2,4 @@ each key-value in that passes a request needs to be stopped
 export data into excel
 add requirements file
 convert to exe or make it run the main.py from shortcut
+try to log and trace all the weights and location matching, if it actually makes sense in practice
