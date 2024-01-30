@@ -114,7 +114,7 @@ if __name__ == "__main__":
     
     }
     
-    t1 = time.time()
+    t1 = time.time() #object creation timer
 
     #create employee objects
     for index, employee_row in emp_data.iterrows():
@@ -132,18 +132,18 @@ if __name__ == "__main__":
     print(f'time for object creation :  {round(time.time() - t1, 2)} sec\n')
     
     
-
+    t3 = time.time()#time for mapping of all employees
     #calculate the route for each employee into his stops variable
     for employee in employees:
-        t2 = time.time()
+        t2 = time.time() #employee mapping timer
         map_employee(employee, nodes, 5)
         print(f'''
-        time for {reverse_data(employee.name)}:  {round(time.time() - t2, 2)}
-        origin:  
-        stops:   {employee.stops}
+        time for {reverse_data(employee.name)}                 :   {round(time.time() - t2, 2)}
+        origin                                :   {employee.start_location}  
+        stops                                 :   {employee.stops}
         
 
         ''')
     
-    t3 = time.time()
+    
     print(f'time for mapping :  {round(time.time() - t3, 2)} sec')
