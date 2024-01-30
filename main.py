@@ -6,50 +6,43 @@ from employee import Employee
 import time
 from typing import List
 
-def getTravelData(origins, destinations):
-    origins = [origins] if isinstance(origins, str) else origins
-    destinations = [destinations] if isinstance(destinations, str) else destinations
+data_path = "./Travel_data.json"
+key_seperator = "    <---->    "
+try:
+    with open(data_path, 'r') as file:
+        travel_dict = json.load(file)
+except json.decoder.JSONDecodeError:
+    travel_dict = {}  # Set a default dictionary or take another appropriate action
+
+
+def getTravelData(origin, destination):
+    global travel_dict
+
+    #check if the travel time is already searched
+    keys = [origin + key_seperator + destination, destination + key_seperator + origin]
+    for key in keys:
+        if key in travel_dict:
+            return travel_dict[key]
 
     base_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
-    api_key = 'AIzaSyBtWeoy_5l6X0HBsiDfmJkr6nsLdUZ6gxw'
-    max_elements_per_request = 100
-    delay_between_requests = 10  # seconds
-
-    num_origins = len(origins)
-    num_destinations = len(destinations)
-    num_elements = num_origins * num_destinations
-
-    # Calculate the ratio between the number of elements and the max elements per request
-    ratio = num_elements / max_elements_per_request
-
-    # Calculate the chunk size for both origins and destinations based on the ratio
-    origin_chunk_size  = max(1, round(num_origins / ratio))
-    destination_chunk_size = max(1, round(num_destinations / ratio))
-    # Split origins and destinations into chunks by the ration
-    origin_chunks = [origins[i:i + origin_chunk_size] for i in range(0, num_origins, origin_chunk_size)]
-    destination_chunks = [destinations[j:j + destination_chunk_size] for j in range(0, num_destinations, destination_chunk_size)]
-
-    combined_response = {}
-
-    for orig_chunk in origin_chunks:
-        for dest_chunk in destination_chunks:
-            payload = {
-                'origins': '|'.join(orig_chunk),
-                'destinations': '|'.join(dest_chunk),
+    api_key = 'AIzaSyBtWeoy_5l6X0HBsiDfmJkr6nsLdUZ6gxw'    
+    payload = {
+                'origins': origin,
+                'destinations': destination,
                 'key': api_key
             }
+    
+    r = requests.get(base_url, params=payload).json()
+    time = r["rows"][0]["elements"][0]["duration"]["text"]
+    
+    #add origin-destination pair to travel_dict
+    travel_dict[keys[0]] = time
+    #update the json file
+    with open(data_path, 'w') as file:
+        json.dump(travel_dict, file, indent=2)
 
-            r = requests.get(base_url, params=payload).json()
-            combined_response = merge_dicts(combined_response, parse_response(r))
-
-            if ratio >1:
-                # Add a delay between requests
-                print("waiting 10 secs")
-                time.sleep(delay_between_requests)
-
-    write_to_file(combined_response, "Travel_Data.json")
-
-    return combined_response
+    
+    return time
 
 
 
@@ -64,7 +57,7 @@ def calculate_weight(node : Node, employee : Employee) -> float:
     #travel time in minutes
     travel_data = getTravelData(employee.location, node.location)
     #the first value in the first value of travel_data
-    travel_time = convert_to_minutes(next(iter(next(iter(travel_data.values()), {}).values()), None))
+    travel_time = convert_to_minutes(travel_data)
     #days since cat request in days
     days_since = (datetime.now() - node.created_on).days
     #how close will the employee be to the feeding time in minutes
@@ -114,30 +107,31 @@ if __name__ == "__main__":
     origins = []
     destinations = []
     nodes = []
-    address = {
-        'hebrew' : {}, #english to hebrew
-        'english' : {} #hebrew to english
+    address_dict = {
+    
     }
     
     t1 = time.time()
 
     #create employee objects
     for index, employee_row in emp_data.iterrows():
-        emp = Employee(employee_row, address, geocode)
+        emp = Employee(employee_row, address_dict, geocode)
         employees.append(emp)
         origins.append(emp.location)
         
 
     #create node objects
     for index, pick_request in cat_data.iterrows():
-        node = Node(pick_request, address, geocode)
+        node = Node(pick_request, address_dict, geocode)
         nodes.append(node)
         destinations.append(node.location)
 
-    print(time.time() - t1)
-    employee = Employee(emp_data.iloc[6], address, geocode)
+    print(f'time for object creation :  {round(time.time() - t1, 2)} sec')
+    t2 = time.time()
+    employee = Employee(emp_data.iloc[6], address_dict, geocode)
     map_employee(employee, nodes, 5)
     print(employee.stops)
+    print(f'time for mapping :  {round(time.time() - t2, 2)} sec')
 
 """
     #calculate the route for each employee into his stops variable

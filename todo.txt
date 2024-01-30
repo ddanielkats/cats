@@ -1,13 +1,4 @@
-1. classify node per worker
-
-2. later, build path for every workers
-    each worker needs to have maximum stops
-        if worker reaches limit, all nodes need to remove him from their lists
-
-
-//alogorithm for nodes and paths works by shortest path first with weights per each data
-
-
-to do
-
-make the getTravelDAta merge the parsed_response and not the response itself
+each key-value in that passes a request needs to be stopped
+export data into excel
+add requirements file
+convert to exe or make it run the main.py from shortcut

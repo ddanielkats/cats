@@ -11,17 +11,6 @@ cat_data = dfs['עיקור חתולים']
 emp_data = dfs['עובדים']
 
 
-#print(cat_data['נוצר ב:'])
-#print(cat_data['שם הפונה'])
-#print(cat_data['יישוב הפנייה'])
-#print(cat_data['רחוב הפנייה'])
-#print(cat_data['מס בית הפנייה'])
-#print(cat_data['שעות האכלה'])
-
-
-#times = getTravelData(['nof hagalil', 'tel aviv'], ['eilat', 'miatzpe ramon'])
-#pprint(times)
-
 #---------------------HERE LYE FUNCTIONS THAT DON'T DEPEND ON EACH OTHER AND ARE USED ELSEWHERE--------------------------
 
 def delete_after_comma(input_str):
@@ -33,27 +22,7 @@ def delete_after_comma(input_str):
         return input_str
     
 
-def write_to_file(jsn, path):
-    with open(path, 'w') as f:
-        json.dump(jsn, f)
 
-
-def parse_response(response):
-    parsed = {}
-    #each row in row list
-    for origin in response["origin_addresses"]:
-        org_indx = response["origin_addresses"].index(origin)
-        elements = response["rows"][org_indx]["elements"]
-        #each element in element list
-        for destination in response["destination_addresses"]:
-            dest_indx = response["destination_addresses"].index(destination)
-            duration = elements[dest_indx]["duration"]["text"]
-            # Use the origin-destination pair as the keys in the parsed dictionary
-            if not origin in parsed:
-                parsed[origin] = {}
-            parsed[origin][destination] = duration
-
-    return parsed
 
 def reverse_data(input_data):
     # Function to reverse a string
@@ -171,5 +140,4 @@ def add_address(adress_dict : dict, hebrew_location : str, coded_location : str)
     
     """
 
-    adress_dict['english'][hebrew_location] = coded_location
-    adress_dict['hebrew'][coded_location] = hebrew_location
+    adress_dict[coded_location] = hebrew_location
