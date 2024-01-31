@@ -2,8 +2,10 @@ import requests
 import pandas as pd
 from datetime import datetime, timedelta
 import math
+import warnings
 #-------------------------constants to be used in main----------------------------------
 #read excel
+warnings.simplefilter(action='ignore', category=UserWarning)
 dfs = pd.read_excel("./CAT_DATA.xlsx", sheet_name=None)
 #data frames for each sheet 
 cat_data = dfs['עיקור חתולים']
@@ -20,7 +22,10 @@ def delete_after_comma(input_str):
     else:
         return input_str
     
-
+    
+def get_address(data_row):
+    """create location string, excluding empty """    
+    return ' '.join(str(data_row[column]) for column in ['יישוב הפנייה', 'רחוב הפנייה', 'מס בית הפנייה'] if not pd.isna(data_row[column]))
 
 
 def reverse_data(input_data):
@@ -142,7 +147,3 @@ def add_address(adress_dict : dict, hebrew_location : str, coded_location : str)
     adress_dict[coded_location] = hebrew_location
 
 
-
-def get_address(data_row):
-    """create location string, excluding empty """    
-    return ' '.join(str(data_row[column]) for column in ['יישוב הפנייה', 'רחוב הפנייה', 'מס בית הפנייה'] if not pd.isna(data_row[column]))

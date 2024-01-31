@@ -1,12 +1,12 @@
-import requests
+import requests, time, json, threading
 from pprint import pprint
 from Utils import *
 from node import Node
 from employee import Employee
-import time
 from typing import List
-import json
 
+#threads = []
+#lock = threading.Lock()
 
 data_path = "./Travel_data.json"
 key_seperator = "    <---->    "
@@ -15,7 +15,6 @@ try:
         travel_dict = json.load(file)
 except json.decoder.JSONDecodeError:
     travel_dict = {}  # Set a default dictionary or take another appropriate action
-
 
 def getTravelData(origin, destination):
     global travel_dict
@@ -99,13 +98,24 @@ def map_employee(emp : Employee, nodes : List[Node], max_stops : int):
         if weight <= min_weight:
             min_weight = weight
             curr_node = node
-    
     emp.add_stop(curr_node.location)
     emp.location = curr_node.location
     # Exclude the current node from the list before making the recursive call
     nodes.remove(curr_node)
 
     map_employee(emp, nodes, max_stops - 1)
+
+
+
+def map_employee_wrapper(employee, nodes, max_stops):
+    t2 = time.time() #employee mapping timer
+    map_employee(employee, nodes, max_stops)
+    print(f'''
+    time for {reverse_data(employee.name)}                 :   {round(time.time() - t2, 2)}
+    origin                                :   {employee.start_location}  
+    stops                                 :   {employee.stops}
+    ''')
+
 
 if __name__ == "__main__":
     employees = []
@@ -138,14 +148,10 @@ if __name__ == "__main__":
     #calculate the route for each employee into his stops variable
     for employee in employees:
         t2 = time.time() #employee mapping timer
-        map_employee(employee, nodes, 5)
-        print(f'''
-        time for {reverse_data(employee.name)}                 :   {round(time.time() - t2, 2)}
-        origin                                :   {employee.start_location}  
-        stops                                 :   {employee.stops}
+        map_employee_wrapper(employee, nodes, 5)
+    
+    # Wait for all threads to finish
+    for thread in threads:
+        thread.join()
         
-
-        ''')
-    
-    
     print(f'time for mapping :  {round(time.time() - t3, 2)} sec')
