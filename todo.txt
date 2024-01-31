@@ -1,6 +1,6 @@
 make thread for each mapping
+add more logic from png, capacity of doctors, shift hours 
 export data into excel
-add requirements file
 convert to exe or make it run the main.py from shortcut
 try to log and trace all the weights and location matching, if it actually makes sense in practice
 create a visual map for all the locations and starting points of employees

@@ -1,5 +1,4 @@
 import requests
-import json
 import pandas as pd
 from datetime import datetime, timedelta
 import math
@@ -141,3 +140,9 @@ def add_address(adress_dict : dict, hebrew_location : str, coded_location : str)
     """
 
     adress_dict[coded_location] = hebrew_location
+
+
+
+def get_address(data_row):
+    """create location string, excluding empty """    
+    return ' '.join(str(data_row[column]) for column in ['יישוב הפנייה', 'רחוב הפנייה', 'מס בית הפנייה'] if not pd.isna(data_row[column]))

@@ -5,6 +5,8 @@ from node import Node
 from employee import Employee
 import time
 from typing import List
+import json
+
 
 data_path = "./Travel_data.json"
 key_seperator = "    <---->    "
@@ -118,14 +120,14 @@ if __name__ == "__main__":
 
     #create employee objects
     for index, employee_row in emp_data.iterrows():
-        emp = Employee(employee_row, address_dict, geocode)
+        emp = Employee(employee_row, address_dict, geocode(employee_row['כתובת תחילה']))
         employees.append(emp)
         origins.append(emp.location)
         
 
     #create node objects
     for index, pick_request in cat_data.iterrows():
-        node = Node(pick_request, address_dict, geocode)
+        node = Node(pick_request, address_dict, geocode(get_address(pick_request)))
         nodes.append(node)
         destinations.append(node.location)
 

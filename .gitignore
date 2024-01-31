@@ -5,6 +5,7 @@ __pycache__/
 
 tempCodeRunnerFile.py
 log.json
+.DS_STORE
 # C extensions
 *.so
 
