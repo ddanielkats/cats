@@ -3,16 +3,10 @@ import pandas as pd
 from datetime import datetime, timedelta
 import math
 import warnings
-#-------------------------constants to be used in main----------------------------------
-#read excel
-warnings.simplefilter(action='ignore', category=UserWarning)
-dfs = pd.read_excel("./SAMPLE.xlsx", sheet_name=None)
-#data frames for each sheet 
-cat_data = dfs['עיקור חתולים']
-emp_data = dfs['עובדים']
 
 
-#---------------------HERE LYE FUNCTIONS THAT DON'T DEPEND ON EACH OTHER AND ARE USED ELSEWHERE--------------------------
+
+#---------------------HERE LYE FUNCTIONS THAT DON'T ARE USED ELSEWHERE--------------------------
 
 def delete_after_comma(input_str):
     if ',' in input_str:
@@ -23,9 +17,7 @@ def delete_after_comma(input_str):
         return input_str
     
     
-def get_address(data_row):
-    """create location string, excluding empty """    
-    return ' '.join(str(data_row[column]) for column in ['יישוב הפנייה', 'רחוב הפנייה', 'מס בית הפנייה'] if not pd.isna(data_row[column]))
+
 
 
 def reverse_data(input_data):
@@ -125,7 +117,7 @@ def merge_dicts(dict1, dict2):
     return dict1
 
 
-def geocode(location : str):
+def geocode(location : str, address_dict : dict):
     base_url = "https://maps.googleapis.com/maps/api/geocode/json"
     api_key = 'AIzaSyBtWeoy_5l6X0HBsiDfmJkr6nsLdUZ6gxw'
     payload = {
@@ -133,17 +125,12 @@ def geocode(location : str):
         'key' : api_key
     }
     r = requests.get(base_url, params=payload).json()
+    formatted =  r['results'][0]['formatted_address']
+    #add the location in hebrew to the dictionary of all addresses
+    address_dict[location] = formatted
     
-    return r['results'][0]['formatted_address']
+    return formatted
 
 
-def add_address(adress_dict : dict, hebrew_location : str, coded_location : str):
-    """adds an adress to a hebrew - english dictionary in both ways
-    hebrew_location : location in hebrew from the excel
-    coded_location : google maps location
-    
-    """
-
-    adress_dict[coded_location] = hebrew_location
 
 

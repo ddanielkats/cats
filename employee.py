@@ -1,15 +1,14 @@
 import requests
-
+from Utils import geocode
 
 class Employee():
-    def __init__(self, emp_data, address, coded_address) -> None:
+    def __init__(self, emp_data, address_dict) -> None:
         self.name = emp_data['שם העובד']
         self.stops = []
 
         
-        #add address to dictionary
-        address[coded_address] = emp_data['כתובת תחילה']
-        self.start_location = coded_address
+        self.hebrew_location = emp_data['כתובת תחילה']
+        self.start_location = geocode(self.hebrew_location, address_dict)
         self.location = self.start_location
         
 

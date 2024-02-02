@@ -1,20 +1,20 @@
 #מייצג פנייה
 import pandas as pd
-
+from Utils import geocode
 class Node():
     #requester represents a row in the dataframe
-    def __init__(self, requester, address, coded_address) -> None:
-        self.created_on = requester['נוצר ב:']
-        self.feed_time = requester['שעות האכלה']
-        self.cat_number = requester['מספר חתולים']
-        self.req_num = requester['מספר פנייה']
+    def __init__(self, node_row, address_dict) -> None:
+        self.created_on = node_row['נוצר ב:']
+        self.feed_time = node_row['שעות האכלה']
+        self.cat_number = node_row['מספר חתולים']
+        self.req_num = node_row['מספר פנייה']
         #join the street, city, home_number into a string
         self.weight = 0
         self.emp_dict = {}
         self.emp_order = []
         #add address to dictionary
-        address[coded_address] = coded_address
-        self.location = coded_address
+        self.hebrew_location = ' '.join(str(node_row[column]) for column in ['יישוב הפנייה', 'רחוב הפנייה', 'מס בית הפנייה'] if not pd.isna(node_row[column]))
+        self.location = geocode(self.hebrew_location, address_dict)
 
 """
     def add_emp(self, emp, weight):

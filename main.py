@@ -5,7 +5,14 @@ from node import Node
 from employee import Employee
 from typing import List
 
-threads = []
+#read excel
+warnings.simplefilter(action='ignore', category=UserWarning)
+dfs = pd.read_excel("./SAMPLE.xlsx", sheet_name=None)
+#data frames for each sheet 
+cat_data = dfs['עיקור חתולים']
+emp_data = dfs['עובדים']
+
+lock = threading.Lock()
 
 data_path = "./Travel_data.json"
 key_seperator = "    <---->    "
@@ -35,12 +42,10 @@ def getTravelData(origin, destination):
     r = requests.get(base_url, params=payload).json()
     time = r["rows"][0]["elements"][0]["duration"]["text"]
     
-    #add origin-destination pair to travel_dict
-    travel_dict[keys[0]] = time
-    #update the json file
-    with open(data_path, 'w') as file:
-        json.dump(travel_dict, file, indent=2)
-
+    
+    with lock:
+        #add origin-destination pair to travel_dict
+        travel_dict[keys[0]] = time
     
     return time
 
@@ -115,46 +120,83 @@ def map_employee_wrapper(employee, nodes, max_stops):
     stops                                 :   {employee.stops}
     ''')
 
+def get_all_routes(locations):
+    threads = []
+    #maps all possible routes
+    for origin in locations:
+        for dest in locations:
+            t = threading.Thread(target=getTravelData, args = (origin, dest))
+            threads.append(t)
+            t.start()
+
+    for thread in threads:
+        thread.join()
+
+
+
+#code all locations of both employees and nodes
+def create_objects(employees, nodes):
+    global address_dict
+    threads = []
+    #create employee objects
+    def create_employee(employee_row, index):
+        try: 
+            emp = Employee(employee_row, address_dict)
+            employees.append(emp)
+        except:
+            print(f"invalid employee address in row: {index}")
+
+    def create_node(node_row, index):
+            try:
+                node = Node(node_row, address_dict)
+                nodes.append(node)
+            except:
+                print(f"invalid node in row : {index}")
+
+    for index, employee_row in emp_data.iterrows():
+        t = threading.Thread(target=create_employee, args=(employee_row, index))
+        threads.append(t)
+        t.start()
+
+    #create node objects
+    for index, node_row in cat_data.iterrows():
+        t = threading.Thread(target=create_node, args=(node_row, index))
+        threads.append(t)
+        t.start()
+
+    for thread in threads:
+        thread.join()
+
 
 if __name__ == "__main__":
     employees = []
-    origins = []
-    destinations = []
     nodes = []
     address_dict = {
     
     }
-    
-    t1 = time.time() #object creation timer
 
-    #create employee objects
-    for index, employee_row in emp_data.iterrows():
-        emp = Employee(employee_row, address_dict, geocode(employee_row['כתובת תחילה']))
-        employees.append(emp)
-        origins.append(emp.location)
-        
-
-    #create node objects
-    for index, pick_request in cat_data.iterrows():
-        try:
-            node = Node(pick_request, address_dict, geocode(get_address(pick_request)))
-        except IndexError:
-            #if the node has no address in the excel
-            pass
-        nodes.append(node)
-        destinations.append(node.location)
-
+    #----------------------------------------------------------
+    #object creation timer
+    t1 = time.time() 
+    create_objects(employees, nodes)
     print(f'time for object creation :  {round(time.time() - t1, 2)} sec\n')
     
-    
-    t3 = time.time()#time for mapping of all employees
+
+    #-----------------------------------------------
+    #time for mapping of all employees
+    t3 = time.time()
     #calculate the route for each employee into his stops variable
+    all_locations = [node.location for node in nodes] + [employee.location for employee in employees]
+    get_all_routes(all_locations)
+    
     for employee in employees:
-        t2 = time.time() #employee mapping timer
         map_employee_wrapper(employee, nodes, 5)
     
-    # Wait for all threads to finish
-    for thread in threads:
-        thread.join()
+    
+
         
     print(f'time for mapping :  {round(time.time() - t3, 2)} sec')
+
+    #update the json file
+    with open(data_path, 'w') as file:
+        json.dump(travel_dict, file, indent=2)
