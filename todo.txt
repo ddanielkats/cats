@@ -1,4 +1,4 @@
-make thread for each mapping
+make thread for each mapping ---> map all possible routes first with threads, then map every node without threads
 add more logic from png, capacity of doctors, shift hours 
 export data into excel
 convert to exe or make it run the main.py from shortcut
