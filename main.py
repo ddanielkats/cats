@@ -5,8 +5,7 @@ from node import Node
 from employee import Employee
 from typing import List
 
-#threads = []
-#lock = threading.Lock()
+threads = []
 
 data_path = "./Travel_data.json"
 key_seperator = "    <---->    "
@@ -137,7 +136,11 @@ if __name__ == "__main__":
 
     #create node objects
     for index, pick_request in cat_data.iterrows():
-        node = Node(pick_request, address_dict, geocode(get_address(pick_request)))
+        try:
+            node = Node(pick_request, address_dict, geocode(get_address(pick_request)))
+        except IndexError:
+            #if the node has no address in the excel
+            pass
         nodes.append(node)
         destinations.append(node.location)
 
