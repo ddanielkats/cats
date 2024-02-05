@@ -1,8 +1,8 @@
-import requests
 import pandas as pd
 from datetime import datetime, timedelta
 import math
 import warnings
+import aiohttp
 
 
 
@@ -17,7 +17,6 @@ def delete_after_comma(input_str):
         return input_str
     
     
-
 
 
 def reverse_data(input_data):
@@ -117,20 +116,31 @@ def merge_dicts(dict1, dict2):
     return dict1
 
 
-def geocode(location : str, address_dict : dict):
+async def geocode(location : str, address_dict : dict):
     base_url = "https://maps.googleapis.com/maps/api/geocode/json"
     api_key = 'AIzaSyBtWeoy_5l6X0HBsiDfmJkr6nsLdUZ6gxw'
     payload = {
         'address' : location,
         'key' : api_key
     }
-    r = requests.get(base_url, params=payload).json()
-    formatted =  r['results'][0]['formatted_address']
-    #add the location in hebrew to the dictionary of all addresses
+    async with aiohttp.ClientSession() as session:
+        async with session.get(base_url, params=payload) as response:
+            r = await response.json()
+            formatted =  r['results'][0]['formatted_address']
+            #add the location in hebrew to the dictionary of all addresses
+
     address_dict[location] = formatted
     
     return formatted
 
 
-
-
+def get_time(origin, destination, travel_dict, key_seperator):
+    #check if the travel time is already searched
+    if origin == destination:
+        return "0 mins"
+    
+    keys = [origin + key_seperator + destination, destination + key_seperator + origin]
+    for key in keys:
+        if key in travel_dict:
+            return travel_dict[key]
+    return False

@@ -3,7 +3,7 @@ import pandas as pd
 from Utils import geocode
 class Node():
     #requester represents a row in the dataframe
-    def __init__(self, node_row, address_dict) -> None:
+    def __init__(self, node_row, coded_location) -> None:
         self.created_on = node_row['נוצר ב:']
         self.feed_time = node_row['שעות האכלה']
         self.cat_number = node_row['מספר חתולים']
@@ -14,8 +14,10 @@ class Node():
         self.emp_order = []
         #add address to dictionary
         self.hebrew_location = ' '.join(str(node_row[column]) for column in ['יישוב הפנייה', 'רחוב הפנייה', 'מס בית הפנייה'] if not pd.isna(node_row[column]))
-        self.location = geocode(self.hebrew_location, address_dict)
+        self.location = coded_location
 
+    def __str__(self) -> str:
+        return self.hebrew_location
 """
     def add_emp(self, emp, weight):
         #append and sort by weights

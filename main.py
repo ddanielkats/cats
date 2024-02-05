@@ -1,4 +1,4 @@
-import requests, time, json, threading
+import requests_async as requests, time, json, asyncio, aiohttp
 from pprint import pprint
 from Utils import *
 from node import Node
@@ -11,8 +11,9 @@ dfs = pd.read_excel("./SAMPLE.xlsx", sheet_name=None)
 #data frames for each sheet 
 cat_data = dfs['עיקור חתולים']
 emp_data = dfs['עובדים']
-
-lock = threading.Lock()
+address_dict = {
+    
+    }
 
 data_path = "./Travel_data.json"
 key_seperator = "    <---->    "
@@ -22,14 +23,17 @@ try:
 except json.decoder.JSONDecodeError:
     travel_dict = {}  # Set a default dictionary or take another appropriate action
 
-def getTravelData(origin, destination):
-    global travel_dict
-
+num = 0
+async def getTravelData(origin, destination):
+    global travel_dict, num
     #check if the travel time is already searched
-    keys = [origin + key_seperator + destination, destination + key_seperator + origin]
-    for key in keys:
-        if key in travel_dict:
-            return travel_dict[key]
+    
+    t = get_time(origin, destination, travel_dict, key_seperator)
+    if (t == 0 and t is not False):
+        travel_dict[origin + key_seperator + destination] = t
+        return t
+    elif t:
+        return t
 
     base_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
     api_key = 'AIzaSyBtWeoy_5l6X0HBsiDfmJkr6nsLdUZ6gxw'    
@@ -39,15 +43,20 @@ def getTravelData(origin, destination):
                 'key': api_key
             }
     
-    r = requests.get(base_url, params=payload).json()
-    time = r["rows"][0]["elements"][0]["duration"]["text"]
+    async with aiohttp.ClientSession() as session:
+        async with session.get(base_url, params=payload) as response:
+            r = await response.json()
+            num += 1
+            print(f"GOT RESPONSE #{num}: {origin} + {key_seperator} + {destination}")
+            time = r["rows"][0]["elements"][0]["duration"]["text"]
     
     
-    with lock:
-        #add origin-destination pair to travel_dict
-        travel_dict[keys[0]] = time
+    #add origin-destination pair to travel_dict
+    travel_dict[origin + key_seperator + destination] = time
     
     return time
+
+
 
 
 
@@ -60,9 +69,7 @@ def calculate_weight(node : Node, employee : Employee) -> float:
     
     """
     #travel time in minutes
-    travel_data = getTravelData(employee.location, node.location)
-    #the first value in the first value of travel_data
-    travel_time = convert_to_minutes(travel_data)
+    travel_time = convert_to_minutes(travel_dict[employee.location + key_seperator + employee.location])
     #days since cat request in days
     days_since = (datetime.now() - node.created_on).days
     #how close will the employee be to the feeding time in minutes
@@ -98,7 +105,7 @@ def map_employee(emp : Employee, nodes : List[Node], max_stops : int):
     min_weight = float('inf')
 
     for node in nodes:
-        weight = calculate_weight(node, employee)
+        weight = calculate_weight(node, emp)
         if weight <= min_weight:
             min_weight = weight
             curr_node = node
@@ -120,83 +127,77 @@ def map_employee_wrapper(employee, nodes, max_stops):
     stops                                 :   {employee.stops}
     ''')
 
-def get_all_routes(locations):
-    threads = []
-    #maps all possible routes
-    for origin in locations:
-        for dest in locations:
-            t = threading.Thread(target=getTravelData, args = (origin, dest))
-            threads.append(t)
-            t.start()
-
-    for thread in threads:
-        thread.join()
 
 
 
 #code all locations of both employees and nodes
-def create_objects(employees, nodes):
-    global address_dict
+def create_objects(employees, nodes, address_dict):
     threads = []
     #create employee objects
-    def create_employee(employee_row, index):
-        try: 
-            emp = Employee(employee_row, address_dict)
+        
+    async def create_employee(employee_row, index):
+        try:
+            coded_address = await geocode(employee_row['כתובת תחילה'], address_dict)
+            emp = Employee(employee_row, coded_address)
             employees.append(emp)
-        except:
+        except IndexError:
             print(f"invalid employee address in row: {index}")
 
-    def create_node(node_row, index):
+    async def create_node(node_row, index):
             try:
-                node = Node(node_row, address_dict)
+                hebrew_location = ' '.join(str(node_row[column]) for column in ['יישוב הפנייה', 'רחוב הפנייה', 'מס בית הפנייה'] if not pd.isna(node_row[column]))
+                coded_address = await geocode(hebrew_location, address_dict)
+                node = Node(node_row, coded_address)
                 nodes.append(node)
-            except:
+            except IndexError:
                 print(f"invalid node in row : {index}")
 
-    for index, employee_row in emp_data.iterrows():
-        t = threading.Thread(target=create_employee, args=(employee_row, index))
-        threads.append(t)
-        t.start()
+    employee_tasks = [create_employee(employee_row, index) for index, employee_row in emp_data.iterrows()]
+    node_tasks = [create_node(cat_row, index) for index, cat_row in cat_data.iterrows()]
 
-    #create node objects
-    for index, node_row in cat_data.iterrows():
-        t = threading.Thread(target=create_node, args=(node_row, index))
-        threads.append(t)
-        t.start()
-
-    for thread in threads:
-        thread.join()
+    return (*employee_tasks, *node_tasks)
 
 
-if __name__ == "__main__":
+def get_all_routes(emp_locations, node_locations):
+    tasks = []
+    #maps all possible routes
+    for origin in node_locations:
+        for dest in emp_locations:
+            
+            tasks.append(getTravelData(origin, dest))
+    return tasks
+
+async def main():
     employees = []
     nodes = []
-    address_dict = {
     
-    }
 
     #----------------------------------------------------------
     #object creation timer
     t1 = time.time() 
-    create_objects(employees, nodes)
+    tasks = create_objects(employees, nodes, address_dict)
+    await asyncio.gather(*tasks)
     print(f'time for object creation :  {round(time.time() - t1, 2)} sec\n')
-    
+    #------------------------------------------------------------
 
-    #-----------------------------------------------
     #time for mapping of all employees
     t3 = time.time()
     #calculate the route for each employee into his stops variable
-    all_locations = [node.location for node in nodes] + [employee.location for employee in employees]
-    get_all_routes(all_locations)
+    await asyncio.gather(*get_all_routes([employee.location for employee in employees], [node.location for node in nodes]))
     
+    #update the json file
+    with open(data_path, 'w') as file:
+        json.dump(travel_dict, file, indent=2)
+
     for employee in employees:
         map_employee_wrapper(employee, nodes, 5)
     
     
-
-        
     print(f'time for mapping :  {round(time.time() - t3, 2)} sec')
+    #------------------------------------------------------------
 
-    #update the json file
-    with open(data_path, 'w') as file:
-        json.dump(travel_dict, file, indent=2)
+
+if __name__ == '__main__':
+
+    asyncio.run(main())
+    
