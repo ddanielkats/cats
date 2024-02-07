@@ -1,5 +1,4 @@
 import requests_async as requests, time, json, asyncio, aiohttp
-from pprint import pprint
 from Utils import *
 from node import Node
 from employee import Employee
@@ -47,7 +46,7 @@ async def getTravelData(origin, destination):
         async with session.get(base_url, params=payload) as response:
             r = await response.json()
             num += 1
-            print(f"GOT RESPONSE #{num}: {origin} + {key_seperator} + {destination}")
+            print(f"GOT RESPONSE #{num}: {origin}{key_seperator}{destination}")
             time = r["rows"][0]["elements"][0]["duration"]["text"]
     
     
@@ -60,16 +59,16 @@ async def getTravelData(origin, destination):
 
 
 
-def calculate_weight(node : Node, employee : Employee) -> float:
+def calculate_weight(node : Node, employee : Employee, travel_dict : dict) -> float:
     """calculates the weight for a given path between soruce and node
     
-    times : Dictionary with origin-location mapping
     node : A cat pickup place
     employee : A given employee
+    travel_dict : a dictionary with travel time values
     
     """
     #travel time in minutes
-    travel_time = convert_to_minutes(travel_dict[employee.location + key_seperator + employee.location])
+    travel_time = convert_to_minutes(get_time(employee.location, node.location, travel_dict, key_seperator))
     #days since cat request in days
     days_since = (datetime.now() - node.created_on).days
     #how close will the employee be to the feeding time in minutes
@@ -93,7 +92,7 @@ def calculate_weight(node : Node, employee : Employee) -> float:
     #lower sum = lower priorty
     return weighted_sum
 
-def map_employee(emp : Employee, nodes : List[Node], max_stops : int): 
+def map_employee(emp : Employee, nodes : List[Node],travel_dict : dict, max_stops : int): 
     """maps all the stops for a given empoloyee by the closest(lowest weight) stop first"""
     if max_stops == 0:
         return
@@ -105,7 +104,7 @@ def map_employee(emp : Employee, nodes : List[Node], max_stops : int):
     min_weight = float('inf')
 
     for node in nodes:
-        weight = calculate_weight(node, emp)
+        weight = calculate_weight(node, emp, travel_dict)
         if weight <= min_weight:
             min_weight = weight
             curr_node = node
@@ -114,15 +113,15 @@ def map_employee(emp : Employee, nodes : List[Node], max_stops : int):
     # Exclude the current node from the list before making the recursive call
     nodes.remove(curr_node)
 
-    map_employee(emp, nodes, max_stops - 1)
+    map_employee(emp, nodes, travel_dict, max_stops - 1)
 
 
 
-def map_employee_wrapper(employee, nodes, max_stops):
+def map_employee_wrapper(employee, nodes, max_stops, travel_dict):
     t2 = time.time() #employee mapping timer
-    map_employee(employee, nodes, max_stops)
+    map_employee(employee, nodes, travel_dict, max_stops)
     print(f'''
-    time for {reverse_data(employee.name)}                 :   {round(time.time() - t2, 2)}
+    {reverse_data(employee.name)}
     origin                                :   {employee.start_location}  
     stops                                 :   {employee.stops}
     ''')
@@ -162,7 +161,7 @@ def get_all_routes(emp_locations, node_locations):
     tasks = []
     #maps all possible routes
     for origin in node_locations:
-        for dest in emp_locations:
+        for dest in emp_locations + node_locations:
             
             tasks.append(getTravelData(origin, dest))
     return tasks
@@ -190,7 +189,7 @@ async def main():
         json.dump(travel_dict, file, indent=2)
 
     for employee in employees:
-        map_employee_wrapper(employee, nodes, 5)
+        map_employee_wrapper(employee, nodes, 5, travel_dict)
     
     
     print(f'time for mapping :  {round(time.time() - t3, 2)} sec')
