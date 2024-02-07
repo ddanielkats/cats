@@ -160,17 +160,16 @@ def create_objects(employees, nodes, address_dict):
 def get_all_routes(emp_locations, node_locations):
     tasks = []
     #maps all possible routes
+    pairs = []
     for origin in node_locations:
         for dest in emp_locations + node_locations:
-            
-            tasks.append(getTravelData(origin, dest))
+                keys = [f"{origin}{key_seperator}{dest}", f"{dest}{key_seperator}{origin}"]
+                if origin != dest and not (keys[0] in pairs or keys[1] in pairs):
+                    tasks.append(getTravelData(origin, dest))
+                    pairs.append(keys[0])
     return tasks
 
-async def main():
-    employees = []
-    nodes = []
-    
-
+async def main(employees, nodes, travel_dict):
     #----------------------------------------------------------
     #object creation timer
     t1 = time.time() 
@@ -182,14 +181,16 @@ async def main():
     #time for mapping of all employees
     t3 = time.time()
     #calculate the route for each employee into his stops variable
+    get_all_routes([employee.location for employee in employees], [node.location for node in nodes])
     await asyncio.gather(*get_all_routes([employee.location for employee in employees], [node.location for node in nodes]))
     
     #update the json file
+    travel_dict = dict(sorted(travel_dict.items()))
     with open(data_path, 'w') as file:
         json.dump(travel_dict, file, indent=2)
 
     for employee in employees:
-        map_employee_wrapper(employee, nodes, 5, travel_dict)
+        map_employee_wrapper(employee, nodes, 3, travel_dict)
     
     
     print(f'time for mapping :  {round(time.time() - t3, 2)} sec')
@@ -197,6 +198,16 @@ async def main():
 
 
 if __name__ == '__main__':
-
-    asyncio.run(main())
+    employees = []
+    nodes = []
     
+    asyncio.run(main(employees, nodes, travel_dict))
+    
+    result_dict = {}
+    for employee in employees:
+        result_dict[employee.name] = employee.stops
+    df = pd.DataFrame.from_dict(result_dict, orient='index')
+    df = df.transpose()
+    df.to_excel('./result.xlsx')
+    df.columns = df.columns.map(lambda x: x[::-1])
+    print(df)
