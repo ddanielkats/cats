@@ -1,4 +1,4 @@
-import requests_async as requests, time, json, asyncio, aiohttp
+import time, json, asyncio, aiohttp
 from Utils import *
 from node import Node
 from employee import Employee
@@ -94,10 +94,7 @@ def calculate_weight(node : Node, employee : Employee, travel_dict : dict) -> fl
 
 def map_employee(emp : Employee, nodes : List[Node],travel_dict : dict, max_stops : int): 
     """maps all the stops for a given empoloyee by the closest(lowest weight) stop first"""
-    if max_stops == 0:
-        return
-    if len(nodes) == 0:
-        print("no more nodes")
+    if max_stops == 0 or len(nodes) == 0:
         return
     
     curr_node = None
@@ -117,14 +114,7 @@ def map_employee(emp : Employee, nodes : List[Node],travel_dict : dict, max_stop
 
 
 
-def map_employee_wrapper(employee, nodes, max_stops, travel_dict):
-    t2 = time.time() #employee mapping timer
-    map_employee(employee, nodes, travel_dict, max_stops)
-    print(f'''
-    {reverse_data(employee.name)}
-    origin                                :   {employee.start_location}  
-    stops                                 :   {employee.stops}
-    ''')
+
 
 
 
@@ -173,15 +163,13 @@ async def main(employees, nodes, travel_dict):
     #----------------------------------------------------------
     #object creation timer
     t1 = time.time() 
-    tasks = create_objects(employees, nodes, address_dict)
-    await asyncio.gather(*tasks)
+    await asyncio.gather(*create_objects(employees, nodes, address_dict))
     print(f'time for object creation :  {round(time.time() - t1, 2)} sec\n')
     #------------------------------------------------------------
 
     #time for mapping of all employees
     t3 = time.time()
     #calculate the route for each employee into his stops variable
-    get_all_routes([employee.location for employee in employees], [node.location for node in nodes])
     await asyncio.gather(*get_all_routes([employee.location for employee in employees], [node.location for node in nodes]))
     
     #update the json file
@@ -190,7 +178,7 @@ async def main(employees, nodes, travel_dict):
         json.dump(travel_dict, file, indent=2)
 
     for employee in employees:
-        map_employee_wrapper(employee, nodes, 3, travel_dict)
+        map_employee(employee, nodes, travel_dict, 3)
     
     
     print(f'time for mapping :  {round(time.time() - t3, 2)} sec')
@@ -209,5 +197,3 @@ if __name__ == '__main__':
     df = pd.DataFrame.from_dict(result_dict, orient='index')
     df = df.transpose()
     df.to_excel('./result.xlsx')
-    df.columns = df.columns.map(lambda x: x[::-1])
-    print(df)
