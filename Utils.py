@@ -3,6 +3,8 @@ from datetime import datetime, timedelta
 import math
 import warnings
 import aiohttp
+import re
+
 
 
 
@@ -78,6 +80,16 @@ def convert_to_minutes(time_string):
         print("Invalid time format")
         return None
 
+def parse_time(time_str):
+    formats = ['%H:%M', '%I:%M', '%H.%M']
+    for fmt in formats:
+        try:
+            time_obj = datetime.strptime(time_str, fmt)
+            return time_obj.strftime('%H:%M')  
+        except ValueError:
+            pass
+    return None
+
 
 def calculate_future_delta(start_time, travel_time, target_hour):
     """returns the time difference in minutes from the time of arrival to the target hour in that day
@@ -85,12 +97,17 @@ def calculate_future_delta(start_time, travel_time, target_hour):
     travel_time : time in minutes
     target_hour : like 7:00
     """
-    #if the target hour is empty in excel, return 0
-    try:
-        if math.isnan(target_hour):
-            return 0
-    except:
-        pass
+
+    if target_hour == 0:
+        return 0
+
+    #regex find hour in string
+    match = re.search("[0-9]{1,2}[\.:][0-9]{1,2}", target_hour)
+    if match is not None:
+        target_hour = match.group()
+    else:
+        return 0
+    
     
     # Calculate arrival time
     arrival_time = start_time + timedelta(minutes=travel_time)
@@ -144,3 +161,11 @@ def get_time(origin, destination, travel_dict, key_seperator):
         if key in travel_dict:
             return travel_dict[key]
     return False
+
+def divide_chunks(l, n): 
+      
+    # looping till length l 
+    for i in range(0, len(l), n):  
+        yield l[i:i + n] 
+
+

@@ -1,11 +1,21 @@
 #מייצג פנייה
 import pandas as pd
 from Utils import geocode
+import math
+
 class Node():
     #requester represents a row in the dataframe
     def __init__(self, node_row, coded_location) -> None:
+        self.node_row = node_row
         self.created_on = node_row['נוצר ב:']
         self.feed_time = node_row['שעות האכלה']
+        #if the target hour is empty in excel, return 0
+        try:
+            if math.isnan(self.feed_time):
+                self.feed_time = 0
+        except: #feed time is string
+            self.feed_time = self.feed_time.replace(".", ":")
+        self.feed_time
         self.cat_number = node_row['מספר חתולים']
         self.req_num = node_row['מספר פנייה']
         #join the street, city, home_number into a string

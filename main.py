@@ -3,6 +3,7 @@ from Utils import *
 from node import Node
 from employee import Employee
 from typing import List
+from asyncio import Semaphore
 
 #read excel
 warnings.simplefilter(action='ignore', category=UserWarning)
@@ -13,18 +14,17 @@ emp_data = dfs['עובדים']
 address_dict = {
     
     }
+sem = Semaphore(500)
 
 data_path = "./Travel_data.json"
 key_seperator = "    <---->    "
 try:
     with open(data_path, 'r') as file:
         travel_dict = json.load(file)
-except json.decoder.JSONDecodeError:
-    travel_dict = {}  # Set a default dictionary or take another appropriate action
+except (json.decoder.JSONDecodeError, FileNotFoundError):
+    travel_dict = {}
 
-num = 0
-async def getTravelData(origin, destination):
-    global travel_dict, num
+async def calculateTravelData(origin, destination,session,  travel_dict = travel_dict):
     #check if the travel time is already searched
     
     t = get_time(origin, destination, travel_dict, key_seperator)
@@ -42,18 +42,15 @@ async def getTravelData(origin, destination):
                 'key': api_key
             }
     
-    async with aiohttp.ClientSession() as session:
-        async with session.get(base_url, params=payload) as response:
-            r = await response.json()
-            num += 1
-            print(f"GOT RESPONSE #{num}: {origin}{key_seperator}{destination}")
-            time = r["rows"][0]["elements"][0]["duration"]["text"]
     
+    async with (sem, session.get(base_url, params=payload) as response):
+        r = await response.json()
+        time = r["rows"][0]["elements"][0]["duration"]["text"]
+
     
     #add origin-destination pair to travel_dict
     travel_dict[origin + key_seperator + destination] = time
     
-    return time
 
 
 
@@ -147,17 +144,29 @@ def create_objects(employees, nodes, address_dict):
     return (*employee_tasks, *node_tasks)
 
 
-def get_all_routes(emp_locations, node_locations):
+async def calculate_all_routes(emp_locations, node_locations, td = travel_dict):
     tasks = []
     #maps all possible routes
-    pairs = []
-    for origin in node_locations:
-        for dest in emp_locations + node_locations:
-                keys = [f"{origin}{key_seperator}{dest}", f"{dest}{key_seperator}{origin}"]
-                if origin != dest and not (keys[0] in pairs or keys[1] in pairs):
-                    tasks.append(getTravelData(origin, dest))
-                    pairs.append(keys[0])
-    return tasks
+    pairs = set()
+    i = 0
+    async with aiohttp.ClientSession() as session:
+        for origin in node_locations:
+            for dest in emp_locations + node_locations:
+                    keys = [f"{origin}{key_seperator}{dest}", f"{dest}{key_seperator}{origin}"]
+                    if origin != dest and not (keys[0] in pairs or keys[1] in pairs):
+                        print(f"tasking #{i}")
+                        tasks.append(calculateTravelData(origin, dest, session, td))
+                        pairs.add(keys[0])
+                        i+=1
+
+        k = 1
+        time_to_sleep = 60 if len(tasks) > 59000 else 0
+        for chunk in divide_chunks(tasks, 59000):
+            print(f"chunk #{k}")
+            await asyncio.gather(*chunk, asyncio.sleep(time_to_sleep))
+            k+=1
+
+
 
 async def main(employees, nodes, travel_dict):
     #----------------------------------------------------------
@@ -170,13 +179,14 @@ async def main(employees, nodes, travel_dict):
     #time for mapping of all employees
     t3 = time.time()
     #calculate the route for each employee into his stops variable
-    await asyncio.gather(*get_all_routes([employee.location for employee in employees], [node.location for node in nodes]))
+    await calculate_all_routes([employee.location for employee in employees], [node.location for node in nodes])
     
     #update the json file
     travel_dict = dict(sorted(travel_dict.items()))
     with open(data_path, 'w') as file:
         json.dump(travel_dict, file, indent=2)
 
+    print("mapping employees ------------------------")
     for employee in employees:
         map_employee(employee, nodes, travel_dict, 3)
     
