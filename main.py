@@ -7,7 +7,7 @@ from asyncio import Semaphore
 
 #read excel
 warnings.simplefilter(action='ignore', category=UserWarning)
-dfs = pd.read_excel("./SAMPLE.xlsx", sheet_name=None)
+dfs = pd.read_excel("./DATA.xlsx", sheet_name=None)
 #data frames for each sheet 
 cat_data = dfs['עיקור חתולים']
 emp_data = dfs['עובדים']
@@ -176,10 +176,10 @@ async def main(employees, nodes, travel_dict):
     print(f'time for object creation :  {round(time.time() - t1, 2)} sec\n')
     #------------------------------------------------------------
 
-    #time for mapping of all employees
-    t3 = time.time()
+    t2 = time.time()
     #calculate the route for each employee into his stops variable
     await calculate_all_routes([employee.location for employee in employees], [node.location for node in nodes])
+    print(f'time for calculating routes :  {round(time.time() - t2, 2)} sec')
     
     #update the json file
     travel_dict = dict(sorted(travel_dict.items()))
@@ -187,6 +187,7 @@ async def main(employees, nodes, travel_dict):
         json.dump(travel_dict, file, indent=2)
 
     print("mapping employees ------------------------")
+    t3 = time.time()
     for employee in employees:
         map_employee(employee, nodes, travel_dict, 3)
     

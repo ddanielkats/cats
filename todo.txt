@@ -1,6 +1,10 @@
-use asyncio
 add more logic from png, capacity of doctors, shift hours 
-export data into excel
+    add max captures per day
+    add budget reference
+
+make it so that you can see details about each employee stop (can do 2d excel still)
+
+
 convert to exe or make it run the main.py from shortcut
 try to log and trace all the weights and location matching, if it actually makes sense in practice
 create a visual map for all the locations and starting points of employees
