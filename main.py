@@ -35,7 +35,7 @@ async def calculateTravelData(origin, destination,session,  travel_dict = travel
         return t
 
     base_url = 'https://maps.googleapis.com/maps/api/distancematrix/json'
-    api_key = 'AIzaSyBtWeoy_5l6X0HBsiDfmJkr6nsLdUZ6gxw'    
+    api_key = 'AIzaSyA80vzxwbDBiJzq4l6kPXnoV5wfmFmfha8'    
     payload = {
                 'origins': origin,
                 'destinations': destination,
@@ -126,7 +126,7 @@ def create_objects(employees, nodes, address_dict):
             coded_address = await geocode(employee_row['כתובת תחילה'], address_dict)
             emp = Employee(employee_row, coded_address)
             employees.append(emp)
-        except IndexError:
+        except IndexError as e:
             print(f"invalid employee address in row: {index}")
 
     async def create_node(node_row, index):

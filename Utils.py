@@ -135,7 +135,7 @@ def merge_dicts(dict1, dict2):
 
 async def geocode(location : str, address_dict : dict):
     base_url = "https://maps.googleapis.com/maps/api/geocode/json"
-    api_key = 'AIzaSyBtWeoy_5l6X0HBsiDfmJkr6nsLdUZ6gxw'
+    api_key = 'AIzaSyA80vzxwbDBiJzq4l6kPXnoV5wfmFmfha8'
     payload = {
         'address' : location,
         'key' : api_key
@@ -143,6 +143,7 @@ async def geocode(location : str, address_dict : dict):
     async with aiohttp.ClientSession() as session:
         async with session.get(base_url, params=payload) as response:
             r = await response.json()
+            print(r)
             formatted =  r['results'][0]['formatted_address']
             #add the location in hebrew to the dictionary of all addresses
 
