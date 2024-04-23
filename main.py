@@ -7,7 +7,7 @@ from asyncio import Semaphore
 
 #read excel
 warnings.simplefilter(action='ignore', category=UserWarning)
-dfs = pd.read_excel("./DATA.xlsx", sheet_name=None)
+dfs = pd.read_excel("./SAMPLE.xlsx", sheet_name=None)
 #data frames for each sheet 
 cat_data = dfs['עיקור חתולים']
 emp_data = dfs['עובדים']
